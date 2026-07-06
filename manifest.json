@@ -1,0 +1,71 @@
+{
+  "manifest_version": 3,
+  "name": "Image Flow",
+  "version": "0.1.0",
+  "description": "Fast lightbox, grid, slideshow, comments and batch downloads for browsing images on reddit.com.",
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "image-flow@example.com",
+      "strict_min_version": "115.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
+
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg",
+    "128": "icons/icon.svg"
+  },
+
+  "permissions": [
+    "storage",
+    "downloads",
+    "cookies"
+  ],
+
+  "host_permissions": [
+    "*://*.reddit.com/*",
+    "*://i.redd.it/*",
+    "*://preview.redd.it/*",
+    "*://*.redd.it/*",
+    "*://i.imgur.com/*"
+  ],
+
+  "background": {
+    "scripts": ["src/background.js"],
+    "type": "module"
+  },
+
+  "action": {
+    "default_title": "Image Flow",
+    "default_popup": "src/popup.html",
+    "default_icon": {
+      "48": "icons/icon.svg",
+      "96": "icons/icon.svg"
+    }
+  },
+
+  "options_ui": {
+    "page": "src/options.html",
+    "open_in_tab": true
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["*://*.reddit.com/*"],
+      "js": ["src/content-script.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": ["src/gallery.css", "icons/icon.svg"],
+      "matches": ["*://*.reddit.com/*"]
+    }
+  ]
+}

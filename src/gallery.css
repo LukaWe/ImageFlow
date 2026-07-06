@@ -1,0 +1,666 @@
+/*
+ * Image Flow — gallery.css
+ * Loaded inside the content script's Shadow DOM, so selectors are scoped and
+ * cannot collide with Reddit's own styles (and vice-versa). No !important wars.
+ *
+ * KEY LAYOUT INVARIANT: the image never resizes or jumps when the comments
+ * panel toggles. The stage always reserves `--rif-panel-width` of empty gutter
+ * on BOTH sides; the comments panel is absolutely positioned inside a gutter
+ * and slides in/out with a transform, so it never changes the image's box.
+ */
+
+:host {
+  --rif-panel-width: 400px;
+  --rif-bg: rgba(8, 9, 12, 0.94);
+  --rif-fg: #f2f3f5;
+  --rif-muted: #a9b0bb;
+  --rif-accent: #ff4500;
+  --rif-accent-2: #ff2d55;
+  --rif-surface: #16181d;
+  --rif-surface-2: #1f232b;
+  --rif-border: #2c313b;
+  --rif-radius: 12px;
+  --rif-z: 2147483000;
+}
+
+* { box-sizing: border-box; }
+
+.rif-ico { display: inline-flex; align-items: center; justify-content: center; }
+.rif-ico svg { display: block; }
+
+/* ------------------------------------------------------------------ */
+/* Floating action button                                             */
+/* ------------------------------------------------------------------ */
+.rif-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: var(--rif-z);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--rif-accent), var(--rif-accent-2));
+  color: #fff;
+  font: 600 14px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(255, 45, 85, 0.45);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.rif-fab:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 10px 26px rgba(255, 45, 85, 0.55); }
+.rif-fab-label { white-space: nowrap; }
+
+/* ------------------------------------------------------------------ */
+/* Overlay shell                                                      */
+/* ------------------------------------------------------------------ */
+.rif-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--rif-z);
+  display: flex;
+  flex-direction: column;
+  background: var(--rif-bg);
+  backdrop-filter: blur(6px);
+  color: var(--rif-fg);
+  font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+.rif-overlay[hidden] { display: none; }
+
+/* ---- Header ---- */
+.rif-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid var(--rif-border);
+  flex: 0 0 auto;
+}
+.rif-brand { font-weight: 700; letter-spacing: 0.2px; margin-right: 6px; white-space: nowrap; }
+.rif-switch { display: inline-flex; align-items: center; gap: 4px; background: var(--rif-surface); border: 1px solid var(--rif-border); border-radius: 8px; padding: 3px 6px; }
+.rif-r { color: var(--rif-muted); }
+.rif-sub { width: 130px; }
+.rif-go { border: none; background: var(--rif-accent); color: #fff; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-weight: 600; }
+.rif-sort, .rif-sub, .rif-search {
+  background: var(--rif-surface);
+  color: var(--rif-fg);
+  border: 1px solid var(--rif-border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  outline: none;
+}
+.rif-sort:focus, .rif-sub:focus, .rif-search:focus { border-color: var(--rif-accent); }
+.rif-search { flex: 1 1 auto; min-width: 120px; }
+.rif-header-actions { display: inline-flex; gap: 4px; margin-left: auto; }
+
+.rif-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--rif-surface);
+  color: var(--rif-fg);
+  border: 1px solid var(--rif-border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.rif-btn:hover { background: var(--rif-surface-2); border-color: var(--rif-accent); }
+.rif-btn-label { font-size: 12px; font-weight: 600; }
+
+/* ---- Banner ---- */
+.rif-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  border-bottom: 1px solid var(--rif-border);
+  flex: 0 0 auto;
+}
+.rif-banner[hidden] { display: none; }
+.rif-banner[data-kind="warn"] { background: #3a2c00; color: #ffdf8a; }
+.rif-banner[data-kind="error"] { background: #3a0f14; color: #ffb3bd; }
+.rif-banner[data-kind="info"] { background: #0f2436; color: #bfe0ff; }
+.rif-banner-text { flex: 1 1 auto; }
+.rif-banner-x, .rif-banner-retry {
+  border: 1px solid currentColor; background: transparent; color: inherit;
+  border-radius: 6px; padding: 4px 10px; cursor: pointer; font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ */
+/* Stage — reserves gutters on both sides so image never jumps         */
+/* ------------------------------------------------------------------ */
+.rif-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--rif-panel-width);
+  transition: padding 0.15s ease;
+}
+
+/* Viewport fills the space between the reserved gutters and holds the reusable
+   2-buffer <img> pool. Definite size here breaks the figure's sizing circularity. */
+.rif-viewport {
+  position: relative;
+  flex: 1 1 auto;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+}
+/* Figure is sized from image metadata (aspect-ratio) BEFORE the pixels load,
+   so there is zero layout shift when the image arrives. */
+.rif-figure {
+  position: relative;
+  margin: 0;
+  max-width: 100%;
+  max-height: calc(100vh - 210px);
+  aspect-ratio: var(--rif-ar, 1.5);
+  width: min(100%, calc((100vh - 210px) * var(--rif-ar, 1.5)));
+}
+/* Each pooled slide fills the figure and animates on the compositor (GPU):
+   only transform/opacity change — never left/width — so no layout or paint. */
+.rif-slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform, opacity;
+  transform: translateX(0);
+  transition:
+    transform var(--rif-slide-ms, 220ms) cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity var(--rif-slide-ms, 220ms) ease;
+  backface-visibility: hidden;
+}
+.rif-img {
+  max-width: 100%;
+  max-height: 100%;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  transform-origin: center center;
+  border-radius: 4px;
+}
+.rif-figure.rif-zoomed { cursor: grab; }
+.rif-figure.rif-zoomed .rif-slide { transition: none; }
+.rif-figure.rif-blurred .rif-img { filter: blur(28px); }
+
+.rif-video-wrap { display: flex; align-items: center; justify-content: center; max-width: 100%; max-height: calc(100vh - 210px); }
+.rif-video-wrap[hidden] { display: none; }
+.rif-video { max-width: 100%; max-height: calc(100vh - 210px); border-radius: 4px; background: #000; }
+
+/* ---- Navigation click zones ---- */
+.rif-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--rif-panel-width);
+  display: flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.rif-zone svg { width: 40px; height: 40px; }
+/* Chevrons sit next to the image (inner edge of each gutter) so the outer
+   gutter space is free for the action toolbar. */
+.rif-zone-prev { left: 0; justify-content: flex-end; padding-right: 18px; }
+.rif-zone-next { right: 0; justify-content: flex-start; padding-left: 18px; }
+.rif-stage:hover .rif-zone { opacity: 1; }
+.rif-zone:hover { color: #fff; background: linear-gradient(90deg, rgba(255,255,255,0.06), transparent); }
+.rif-zone-next:hover { background: linear-gradient(270deg, rgba(255,255,255,0.06), transparent); }
+
+/* ---- Spinner ---- */
+.rif-spinner {
+  position: absolute;
+  width: 46px; height: 46px;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--rif-accent);
+  border-radius: 50%;
+  animation: rif-spin 0.8s linear infinite;
+  z-index: 2;
+}
+.rif-spinner[hidden] { display: none; }
+@keyframes rif-spin { to { transform: rotate(360deg); } }
+
+/* ---- Progress + caption ---- */
+.rif-progress {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--rif-border);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  z-index: 4;
+  pointer-events: none;
+}
+/* Title/caption BAR — its own row between the header and the image, so the
+   title is never painted over the image. Hidden entirely when title is off. */
+.rif-captionbar {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.28);
+  border-bottom: 1px solid var(--rif-border);
+}
+.rif-captionbar[hidden] { display: none; }
+.rif-caption {
+  width: 100%;
+  max-width: min(1100px, calc(100vw - 2 * var(--rif-panel-width) - 24px));
+  text-align: center;
+}
+.rif-cap-title {
+  font-size: 14.5px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; /* single line → fixed height, no image jump */
+}
+.rif-cap-meta { margin-top: 2px; display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center; color: var(--rif-muted); font-size: 12px; }
+.rif-cap-sub { color: #ff8a3d; font-weight: 600; }
+.rif-cap-score { color: #ffb37a; }
+.rif-cap-cc { font-style: italic; }
+/* NSFW reveal — centered over the image, independent of the title toggle */
+.rif-reveal {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  z-index: 5; border: 1px solid var(--rif-accent-2); background: rgba(255, 45, 85, 0.2);
+  color: #ffb3bd; padding: 10px 16px; border-radius: 10px; cursor: pointer; font-weight: 600;
+}
+.rif-reveal[hidden] { display: none; }
+/* Active state for the title toggle button in the header */
+.rif-header-actions .rif-btn.active { border-color: var(--rif-accent); color: #fff; }
+
+/* ---- Image action buttons ----
+   Docked as a vertical toolbar in the LEFT gutter (the reserved empty space),
+   so they never sit over the image. The chevrons hug the image's inner edges,
+   leaving this outer area clear. */
+.rif-img-actions {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 6;
+}
+.rif-img-actions .rif-btn { background: rgba(0, 0, 0, 0.55); justify-content: flex-start; }
+/* On narrow screens the gutters collapse — fall back to a bottom-left row that
+   still avoids the centred image. */
+@media (max-width: 820px) {
+  .rif-img-actions { left: 10px; bottom: 10px; top: auto; transform: none; flex-direction: row; flex-wrap: wrap; max-width: calc(100vw - 20px); }
+}
+
+/* ---- Gallery dots ---- */
+.rif-dots {
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  gap: 6px;
+  z-index: 4;
+}
+.rif-dots[hidden] { display: none; }
+.rif-dot { width: 8px; height: 8px; border-radius: 50%; border: none; background: rgba(255,255,255,0.35); cursor: pointer; padding: 0; }
+.rif-dot.active { background: var(--rif-accent); transform: scale(1.3); }
+
+/* ---- Thumbnail strip ---- */
+.rif-thumbs {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 2 * var(--rif-panel-width) - 24px);
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  overflow-x: auto;
+  z-index: 4;
+  scrollbar-width: thin;
+}
+.rif-thumbs[hidden] { display: none; }
+.rif-thumb { flex: 0 0 auto; width: 46px; height: 34px; border: 2px solid transparent; border-radius: 5px; overflow: hidden; padding: 0; cursor: pointer; background: #000; }
+.rif-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rif-thumb.active { border-color: var(--rif-accent); }
+.rif-thumb-vid { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: #fff; }
+
+/* ------------------------------------------------------------------ */
+/* Comments panel — lives in a reserved gutter, slides via transform   */
+/* ------------------------------------------------------------------ */
+.rif-comments {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: var(--rif-panel-width);
+  background: var(--rif-surface);
+  border-left: 1px solid var(--rif-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 6;
+  transition: transform 0.22s ease;
+}
+.rif-comments[hidden] { display: none; }
+.rif-comments[data-side="right"] { right: 0; transform: translateX(100%); }
+.rif-comments[data-side="left"] { left: 0; right: auto; border-left: none; border-right: 1px solid var(--rif-border); transform: translateX(-100%); }
+.rif-overlay[data-comments="open"] .rif-comments[data-side="right"] { transform: translateX(0); }
+.rif-overlay[data-comments="open"] .rif-comments[data-side="left"] { transform: translateX(0); }
+
+.rif-comments-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--rif-border); flex: 0 0 auto; }
+.rif-comments-head strong { font-size: 15px; }
+.rif-comments-open { margin-left: auto; color: #7cc0ff; text-decoration: none; font-size: 12.5px; }
+.rif-comments-x { border: none; background: transparent; color: var(--rif-muted); font-size: 16px; cursor: pointer; }
+.rif-comments-list { flex: 1 1 auto; overflow-y: auto; padding: 8px 12px 24px; }
+.rif-comments-loading { color: var(--rif-muted); padding: 16px 4px; }
+
+.rif-comment { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.rif-comment[data-depth="1"] { margin-left: 12px; border-left: 2px solid var(--rif-border); padding-left: 10px; }
+.rif-comment[data-depth="2"] { margin-left: 22px; border-left: 2px solid var(--rif-border); padding-left: 10px; }
+.rif-comment[data-depth="3"], .rif-comment[data-depth="4"], .rif-comment[data-depth="5"], .rif-comment[data-depth="6"] { margin-left: 32px; border-left: 2px solid var(--rif-border); padding-left: 10px; }
+.rif-comment-meta { display: flex; gap: 10px; align-items: baseline; margin-bottom: 3px; }
+.rif-comment-author { font-weight: 600; color: #9ecbff; font-size: 12.5px; }
+.rif-comment-score { color: var(--rif-muted); font-size: 12px; }
+.rif-comment-body { white-space: pre-wrap; word-break: break-word; font-size: 13px; color: #e6e8eb; }
+.rif-reply-toggle, .rif-more-comments, .rif-link-btn {
+  margin-top: 5px; border: none; background: transparent; color: #7cc0ff; cursor: pointer; font-size: 12.5px; padding: 2px 0;
+}
+.rif-more-comments { color: var(--rif-accent); font-weight: 600; }
+.rif-replies[hidden] { display: none; }
+
+/* ------------------------------------------------------------------ */
+/* Grid overview — browse (click to jump) + select-to-download modes    */
+/* ------------------------------------------------------------------ */
+.rif-grid {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 7, 10, 0.98);
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+}
+.rif-grid[hidden] { display: none; }
+.rif-grid-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--rif-border); flex: 0 0 auto; }
+.rif-grid-title { color: var(--rif-muted); white-space: nowrap; }
+.rif-grid-search { flex: 1 1 auto; min-width: 120px; max-width: 360px; background: var(--rif-surface); color: var(--rif-fg); border: 1px solid var(--rif-border); border-radius: 8px; padding: 7px 10px; outline: none; }
+.rif-grid-search:focus { border-color: var(--rif-accent); }
+.rif-btn-primary { background: var(--rif-accent); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
+.rif-btn-secondary { background: var(--rif-surface-2); color: var(--rif-fg); border: 1px solid var(--rif-border); border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+.rif-btn-ghost { background: transparent; color: var(--rif-muted); border: 1px solid var(--rif-border); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+/* Explicit grid tracks avoid relying on aspect-ratio sizing on native buttons in
+   Firefox. Each button fills a real square grid slot, so thumbnails cannot pile
+   into the same position if button intrinsic sizing behaves differently. */
+.rif-grid-cells {
+  --rif-grid-cell-size: clamp(112px, 16vw, 170px);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--rif-grid-cell-size), var(--rif-grid-cell-size)));
+  grid-auto-rows: var(--rif-grid-cell-size);
+  gap: 10px;
+  align-content: start;
+  align-items: stretch;
+  justify-content: start;
+}
+.rif-grid-cell { position: relative; display: block; width: 100%; height: 100%; appearance: none; min-width: 0; border: 2px solid var(--rif-cell-border, transparent); border-radius: 8px; overflow: hidden; padding: 0; cursor: pointer; background: #000; line-height: 0; }
+.rif-grid-cell img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.15s ease; }
+.rif-grid-cell:hover { --rif-cell-border: var(--rif-muted); }
+.rif-grid-cell:hover img { transform: scale(1.05); }
+.rif-grid-cell .rif-check { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,0.6); color: transparent; display: none; align-items: center; justify-content: center; font-weight: 700; }
+.rif-grid-cell.checked { --rif-cell-border: var(--rif-accent); }
+.rif-grid-cell.checked .rif-check { background: var(--rif-accent); color: #fff; }
+/* Gallery grouping: images from the same multi-image post share a coloured ring
+   and show an "i/N" badge, so it's obvious which cells belong to one post. */
+.rif-grid-group { box-shadow: inset 0 0 0 3px var(--rif-group-soft, var(--rif-group, transparent)), 0 0 0 1px var(--rif-group, transparent); }
+.rif-grid-group::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 5px; background: var(--rif-group, transparent); pointer-events: none; }
+.rif-grid-badge { position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 700; color: #fff; background: var(--rif-group, rgba(0,0,0,0.65)); text-shadow: 0 1px 2px rgba(0,0,0,0.6); pointer-events: none; }
+/* Bottom sentinel: loads one more batch when scrolled into view; also clickable */
+.rif-grid-footer { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; padding: 18px 0 8px; min-height: 44px; }
+.rif-grid-end, .rif-grid-loading { color: var(--rif-muted); font-size: 13px; }
+/* Mode gating: selection checks + selection/download controls only in select mode */
+.rif-grid[data-mode="select"] .rif-grid-cell .rif-check { display: flex; }
+.rif-grid[data-mode="browse"] .rif-grid-zip,
+.rif-grid[data-mode="browse"] .rif-grid-seq,
+.rif-grid[data-mode="browse"] .rif-grid-selall,
+.rif-grid[data-mode="browse"] .rif-grid-clear { display: none; }
+
+/* ------------------------------------------------------------------ */
+/* In-gallery settings overlay                                        */
+/* ------------------------------------------------------------------ */
+.rif-settings {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(6, 7, 10, 0.82);
+}
+.rif-settings[hidden] { display: none; }
+.rif-settings-card {
+  width: min(780px, calc(100vw - 40px));
+  max-height: min(760px, calc(100vh - 40px));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--rif-surface);
+  border: 1px solid var(--rif-border);
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.58);
+}
+.rif-settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--rif-border);
+  flex: 0 0 auto;
+}
+.rif-settings-head h2 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.2;
+}
+.rif-settings-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px 18px;
+}
+.rif-settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 260px);
+  align-items: center;
+  gap: 18px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rif-border);
+}
+.rif-settings-row:last-child { border-bottom: none; }
+.rif-settings-meta { min-width: 0; }
+.rif-settings-name {
+  font-weight: 700;
+  line-height: 1.25;
+}
+.rif-settings-desc {
+  margin-top: 2px;
+  color: var(--rif-muted);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.rif-settings-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+.rif-settings-input {
+  width: 100%;
+  min-width: 0;
+  background: var(--rif-surface-2);
+  color: var(--rif-fg);
+  border: 1px solid var(--rif-border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  outline: none;
+}
+.rif-settings-input:focus {
+  border-color: var(--rif-accent);
+  box-shadow: 0 0 0 2px rgba(255, 69, 0, 0.18);
+}
+.rif-settings-input[type="range"] {
+  flex: 1 1 auto;
+  padding: 0;
+  accent-color: var(--rif-accent);
+}
+.rif-settings-value {
+  flex: 0 0 58px;
+  color: var(--rif-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.rif-settings-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+.rif-settings-switch input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.rif-settings-slider {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--rif-border);
+  border-radius: 999px;
+  background: #242934;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+.rif-settings-slider::before {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 2px;
+  top: 2px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transition: transform 0.14s ease;
+}
+.rif-settings-switch input:checked + .rif-settings-slider {
+  background: var(--rif-accent);
+  border-color: var(--rif-accent);
+}
+.rif-settings-switch input:checked + .rif-settings-slider::before { transform: translateX(20px); }
+.rif-settings-switch input:focus-visible + .rif-settings-slider {
+  box-shadow: 0 0 0 2px rgba(255, 69, 0, 0.28);
+}
+.rif-settings-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--rif-border);
+  flex: 0 0 auto;
+}
+
+/* ------------------------------------------------------------------ */
+/* Help sheet                                                         */
+/* ------------------------------------------------------------------ */
+.rif-help { position: absolute; inset: 0; background: rgba(6, 7, 10, 0.8); z-index: 8; display: flex; align-items: center; justify-content: center; }
+.rif-help[hidden] { display: none; }
+.rif-help-card { background: var(--rif-surface); border: 1px solid var(--rif-border); border-radius: var(--rif-radius); padding: 22px 26px; max-width: 560px; width: calc(100% - 40px); box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+.rif-help-card h2 { margin: 0 0 16px; font-size: 18px; }
+.rif-help-grid { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; align-items: center; }
+.rif-help-grid kbd { justify-self: start; background: var(--rif-surface-2); border: 1px solid var(--rif-border); border-bottom-width: 2px; border-radius: 6px; padding: 3px 8px; font-size: 12px; font-family: ui-monospace, monospace; white-space: nowrap; }
+.rif-help-grid span { color: var(--rif-muted); }
+.rif-help-close { margin-top: 20px; width: 100%; background: var(--rif-accent); color: #fff; border: none; border-radius: 8px; padding: 10px; font-weight: 600; cursor: pointer; }
+
+/* ------------------------------------------------------------------ */
+/* Toasts                                                             */
+/* ------------------------------------------------------------------ */
+.rif-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: calc(var(--rif-z) + 10); display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+.rif-toast-item { background: rgba(20, 22, 28, 0.96); color: #fff; border: 1px solid var(--rif-border); border-radius: 10px; padding: 10px 16px; font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); opacity: 0; transform: translateY(10px); transition: opacity 0.25s ease, transform 0.25s ease; max-width: 80vw; }
+.rif-toast-item.show { opacity: 1; transform: translateY(0); }
+
+/* ------------------------------------------------------------------ */
+/* HD + data-saver + debug overlay                                    */
+/* ------------------------------------------------------------------ */
+.rif-banner small { color: inherit; opacity: 0.85; }
+.rif-banner-link { color: inherit; text-decoration: underline; font-weight: 600; }
+
+.rif-hd { background: rgba(0, 0, 0, 0.55); }
+.rif-thumb-hint { border: 1px dashed var(--rif-border); background: transparent; color: var(--rif-muted); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 12px; }
+
+.rif-comments-sentinel { height: 1px; }
+
+.rif-debug {
+  position: absolute;
+  top: 60px;
+  right: 16px;
+  z-index: 9;
+  background: rgba(10, 12, 16, 0.95);
+  border: 1px solid var(--rif-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font: 12px/1.6 ui-monospace, SFMono-Regular, monospace;
+  color: #cfe8ff;
+  min-width: 300px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+.rif-debug[hidden] { display: none; }
+.rif-debug-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.rif-debug-row strong { color: #fff; }
+.rif-debug-x { background: transparent; border: none; color: var(--rif-muted); cursor: pointer; font-size: 14px; }
+.rif-debug-note { margin-top: 6px; color: var(--rif-muted); font-style: italic; }
+
+/* ------------------------------------------------------------------ */
+/* Responsive: collapse reserved gutters on narrow screens            */
+/* ------------------------------------------------------------------ */
+@media (max-width: 1100px) {
+  :host { --rif-panel-width: 300px; }
+}
+@media (max-width: 820px) {
+  :host { --rif-panel-width: 0px; }
+  /* On small screens the comments panel becomes an overlay drawer that DOES
+     cover the image (no room to reserve), which is the expected mobile UX. */
+  .rif-comments { width: min(88vw, 420px); box-shadow: -8px 0 30px rgba(0,0,0,0.5); }
+  .rif-comments[data-side="left"] { box-shadow: 8px 0 30px rgba(0,0,0,0.5); }
+  .rif-zone { width: 64px; }
+  .rif-caption, .rif-thumbs { max-width: calc(100vw - 24px); }
+  .rif-header { flex-wrap: wrap; }
+  .rif-settings { padding: 12px; }
+  .rif-settings-card { width: calc(100vw - 24px); max-height: calc(100vh - 24px); }
+  .rif-settings-row { grid-template-columns: 1fr; gap: 8px; }
+  .rif-settings-control { justify-content: flex-start; }
+  .rif-settings-foot { flex-wrap: wrap; }
+}

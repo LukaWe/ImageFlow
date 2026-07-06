@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Image Flow — Before you start</title>
+  <style>
+    :root {
+      --accent: #ff4500; --accent-2: #ff2d55;
+      --bg: #0f1115; --surface: #1a1d24; --border: #2c313b; --fg: #f2f3f5; --muted: #a9b0bb;
+    }
+    @media (prefers-color-scheme: light) {
+      :root { --bg: #f6f7f9; --surface: #ffffff; --border: #e2e5ea; --fg: #14161a; --muted: #5c636e; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: var(--bg); color: var(--fg); font: 15px/1.6 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px; }
+    .card { max-width: 620px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 32px 34px; box-shadow: 0 24px 60px rgba(0,0,0,0.25); }
+    .badge { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; margin-bottom: 8px; }
+    .logo { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+    h1 { font-size: 22px; margin: 10px 0 14px; }
+    p { margin: 0 0 14px; }
+    .note { background: rgba(255,69,0,0.10); border: 1px solid rgba(255,69,0,0.35); border-radius: 10px; padding: 14px 16px; color: inherit; }
+    ul { margin: 6px 0 16px; padding-left: 20px; color: var(--muted); }
+    li { margin: 4px 0; }
+    .muted { color: var(--muted); font-size: 13.5px; }
+    .row { display: flex; gap: 12px; align-items: center; margin-top: 22px; }
+    button.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; border: none;
+      border-radius: 10px; padding: 12px 20px; font-weight: 700; font-size: 15px; cursor: pointer; }
+    button.primary:hover { filter: brightness(1.07); }
+    a { color: #4c9ffe; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge"><span class="logo"></span> Image Flow</div>
+    <h1>How this extension signs in to Reddit</h1>
+
+    <div class="note">
+      <strong>This extension relies on your Reddit login session</strong>.
+      If Reddit's policies change or this stops working, an update may be required.
+    </div>
+
+    <p style="margin-top:18px">In plain terms:</p>
+    <ul>
+      <li>Just make sure you're <strong>logged in to reddit.com in Firefox</strong>. That's it — no app registration, no API keys.</li>
+      <li>The extension makes the same requests reddit.com already makes for you, using <em>your own</em> session — it only shows content you could already see by browsing normally.</li>
+      <li>To stay well-behaved it limits itself to ~30 requests/minute and caches results.</li>
+    </ul>
+
+    <p class="muted">Open any <code>reddit.com/r/&lt;subreddit&gt;</code> page and click the floating <strong>Gallery</strong> button, or use the toolbar icon.</p>
+
+    <div class="row">
+      <button class="primary" id="ok">Got it — let's go</button>
+      <a href="https://www.reddit.com/login" target="_blank" rel="noopener">Log in to Reddit ↗</a>
+    </div>
+  </div>
+  <script src="first-run-notice.js"></script>
+</body>
+</html>

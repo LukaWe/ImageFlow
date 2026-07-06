@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff5700"/>
+      <stop offset="1" stop-color="#ff2d55"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="26" fill="url(#g)"/>
+  <!-- stacked photo cards implying a swipeable flow -->
+  <g transform="rotate(-8 64 66)">
+    <rect x="30" y="34" width="68" height="60" rx="8" fill="#ffffff" opacity="0.35"/>
+  </g>
+  <g transform="rotate(6 64 66)">
+    <rect x="30" y="34" width="68" height="60" rx="8" fill="#ffffff" opacity="0.6"/>
+  </g>
+  <rect x="34" y="38" width="60" height="52" rx="7" fill="#ffffff"/>
+  <circle cx="50" cy="55" r="7" fill="#ff8a3d"/>
+  <path d="M40 84 L57 66 L68 78 L78 66 L88 84 Z" fill="#2b6cff"/>
+  <!-- navigation arrows -->
+  <path d="M20 66 l-9 -9 v6 h-6 v6 h6 v6 z" fill="#ffffff"/>
+  <path d="M108 66 l9 -9 v6 h6 v6 h-6 v6 z" fill="#ffffff"/>
+</svg>

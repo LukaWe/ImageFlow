@@ -1,0 +1,37 @@
+{
+  "name": "image-flow",
+  "version": "0.1.0",
+  "description": "Firefox extension for browsing images on reddit.com with a fast lightbox, grid, slideshow, comments and batch downloads.",
+  "private": true,
+  "license": "MIT",
+  "author": "LukaWe (https://github.com/LukaWe)",
+  "homepage": "https://github.com/LukaWe/ImageFlow#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LukaWe/ImageFlow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LukaWe/ImageFlow/issues"
+  },
+  "type": "module",
+  "scripts": {
+    "lint": "web-ext lint --source-dir .",
+    "start": "web-ext run --source-dir . --browser-console --url https://www.reddit.com/r/EarthPorn/",
+    "build": "web-ext build --source-dir . --artifacts-dir ./web-ext-artifacts --overwrite-dest",
+    "sign": "web-ext sign --source-dir . --channel unlisted"
+  },
+  "devDependencies": {
+    "web-ext": "^8.0.0"
+  },
+  "webExt": {
+    "ignoreFiles": [
+      "README.md",
+      "package.json",
+      "package-lock.json",
+      "node_modules",
+      ".claude",
+      ".gitignore",
+      "web-ext-artifacts"
+    ]
+  }
+}

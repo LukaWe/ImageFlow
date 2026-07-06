@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Image Flow — Settings</title>
+  <style>
+    :root {
+      --accent: #ff4500;
+      --accent-2: #ff2d55;
+      --bg: #0f1115;
+      --surface: #1a1d24;
+      --surface-2: #22262f;
+      --border: #2c313b;
+      --fg: #f2f3f5;
+      --muted: #a9b0bb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 40px 20px; background: var(--bg); color: var(--fg);
+      font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    .wrap { max-width: 640px; margin: 0 auto; }
+    h1 { font-size: 22px; display: flex; align-items: center; gap: 10px; }
+    h1 .logo { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+    p.sub { color: var(--muted); margin-top: 4px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 8px 20px; margin-top: 22px; }
+    .field { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+    .field:last-child { border-bottom: none; }
+    .field .meta { max-width: 62%; }
+    .field .meta .name { font-weight: 600; }
+    .field .meta .desc { color: var(--muted); font-size: 13px; margin-top: 2px; }
+    select, input[type="number"] {
+      background: var(--surface-2); color: var(--fg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 10px; min-width: 130px; outline: none;
+    }
+    select:focus, input:focus { border-color: var(--accent); }
+    /* toggle */
+    .switch { position: relative; width: 48px; height: 26px; flex: 0 0 auto; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; transition: 0.2s; cursor: pointer; }
+    .slider::before { content: ""; position: absolute; width: 20px; height: 20px; left: 3px; top: 2px; background: #fff; border-radius: 50%; transition: 0.2s; }
+    .switch input:checked + .slider { background: var(--accent); border-color: var(--accent); }
+    .switch input:checked + .slider::before { transform: translateX(22px); }
+    .range-val { display: inline-block; min-width: 46px; text-align: right; color: var(--muted); }
+    .saved { color: #35c46a; font-size: 13px; height: 18px; margin-top: 14px; transition: opacity 0.3s; opacity: 0; }
+    .saved.show { opacity: 1; }
+    .reset { margin-top: 20px; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 8px; padding: 9px 14px; cursor: pointer; }
+    footer { color: var(--muted); font-size: 12.5px; margin-top: 28px; line-height: 1.6; }
+    footer a { color: #7cc0ff; }
+    .notice { background: rgba(255,69,0,0.10); border: 1px solid rgba(255,69,0,0.35); border-radius: 12px; padding: 14px 18px; margin-top: 20px; font-size: 13.5px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1><span class="logo"></span> Image Flow</h1>
+    <p class="sub">Preferences are stored locally (browser.storage.local) and apply instantly.</p>
+
+    <div class="notice">
+      <strong>Reddit access:</strong> this extension uses <em>your existing reddit.com login session</em>
+      — just stay logged in to Reddit in Firefox. No app registration or API key is needed. If Reddit changes
+      its policies an extension update may be required. To stay well-behaved it self-limits to ~30 requests/min.
+    </div>
+
+    <div class="card" id="account">
+      <div class="field">
+        <div class="meta"><div class="name">Reddit sign-in</div><div class="desc" id="acctStatus">Checking your Reddit session…</div></div>
+        <button class="reset" id="connectBtn" style="margin: 0; display:none">Connect</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <div class="meta"><div class="name">Comments panel side</div><div class="desc">Which side the YouTube-style comments drawer slides in from.</div></div>
+        <select id="commentsSide">
+          <option value="right">Right</option>
+          <option value="left">Left</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="meta"><div class="name">Default sort</div><div class="desc">Sort used when a gallery first opens.</div></div>
+        <select id="defaultSort">
+          <option value="hot">Hot</option>
+          <option value="new">New</option>
+          <option value="top">Top</option>
+          <option value="rising">Rising</option>
+          <option value="best">Best</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="meta"><div class="name">Show image title</div><div class="desc">Show the title / subreddit / author caption bar above the image. When off, no title is displayed. Toggle any time in the gallery with the “T” key.</div></div>
+        <label class="switch"><input type="checkbox" id="showTitle" /><span class="slider"></span></label>
+      </div>
+
+      <div class="field">
+        <div class="meta"><div class="name">Blur NSFW images</div><div class="desc">Blur images from over-18 posts until you click to reveal.</div></div>
+        <label class="switch"><input type="checkbox" id="nsfwBlur" /><span class="slider"></span></label>
+      </div>
+
+      <div class="field">
+        <div class="meta"><div class="name">Slideshow image duration</div><div class="desc">Seconds each image stays visible before the next image is shown.</div></div>
+        <div><input type="range" id="slideshowSeconds" min="1" max="120" step="1" /> <span class="range-val" id="slideshowSecondsVal"></span></div>
+      </div>
+
+      <div class="field">
+        <div class="meta"><div class="name">Slideshow first switch delay</div><div class="desc">Seconds to wait before the first automatic advance after slideshow starts.</div></div>
+        <div><input type="range" id="slideshowFirstDelaySeconds" min="0" max="120" step="1" /> <span class="range-val" id="slideshowFirstDelaySecondsVal"></span></div>
+      </div>
+
+      <div class="field">
+        <div class="meta"><div class="name">Slideshow transition duration</div><div class="desc">Animation time for moving from one image to the next.</div></div>
+        <div><input type="range" id="slideshowTransitionMs" min="0" max="3000" step="50" /> <span class="range-val" id="slideshowTransitionMsVal"></span></div>
+      </div>
+
+      <div class="field">
+        <div class="meta"><div class="name">Pause slideshow on hover</div><div class="desc">Stop the auto-advance timer while the pointer is over the image.</div></div>
+        <label class="switch"><input type="checkbox" id="slideshowPauseOnHover" /><span class="slider"></span></label>
+      </div>
+
+      <div class="field">
+        <div class="meta"><div class="name">Side panel width</div><div class="desc">Reserved empty space on each side (px). The image never resizes when comments toggle.</div></div>
+        <div><input type="range" id="panelWidth" min="280" max="560" step="20" /> <span class="range-val" id="panelWidthVal"></span></div>
+      </div>
+
+      <div class="field">
+        <div class="meta"><div class="name">Data saver mode</div><div class="desc">Disables lookahead prefetch, defers thumbnail strips, and prefers smaller preview.redd.it variants (with a per-image “HD” button to load full resolution).</div></div>
+        <label class="switch"><input type="checkbox" id="dataSaver" /><span class="slider"></span></label>
+      </div>
+
+      <div class="field">
+        <div class="meta"><div class="name">Image cache cap</div><div class="desc">Max disk used by the CDN image cache (Cache Storage) before oldest-first LRU eviction. Image caching never counts against Reddit's API limit.</div></div>
+        <div><input type="range" id="imageCacheMB" min="50" max="1000" step="50" /> <span class="range-val" id="imageCacheMBVal"></span></div>
+      </div>
+    </div>
+
+    <div class="saved" id="saved">✓ Saved</div>
+    <button class="reset" id="reset">Reset to defaults</button>
+
+    <footer>
+      <p><strong>Reddit API note:</strong> this add-on uses Reddit's public <code>.json</code> endpoints for personal browsing and respects rate limits with exponential backoff. Bulk/automated downloading may conflict with Reddit's
+      <a href="https://www.redditinc.com/policies/data-api-terms" target="_blank" rel="noopener">Data API Terms</a> — please download responsibly and for personal use only.</p>
+    </footer>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>
